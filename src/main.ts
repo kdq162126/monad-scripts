@@ -21,12 +21,10 @@ const csvFilePath = path.join(__dirname, "../function_calls.csv");
 
 // Load counters from CSV or initialize
 async function loadCounters(): Promise<Record<string, number>> {
-  const counters: Record<string, number> = {
-    deposit: 0,
-    withdraw: 0,
-    stake: 0,
-    redeem: 0,
-  };
+  const counters: Record<string, number> = functionNames.reduce((acc, fn) => {
+    acc[fn] = 0;
+    return acc;
+  }, {} as Record<string, number>);
 
   try {
     const data = await fs.readFile(csvFilePath, "utf8");
@@ -34,10 +32,10 @@ async function loadCounters(): Promise<Record<string, number>> {
     if (lines.length > 1) {
       // Check for data row
       const counts = lines[1].split(",").map(Number); // Second line is the data
-      counters.deposit = counts[0] || 0;
-      counters.withdraw = counts[1] || 0;
-      counters.stake = counts[2] || 0;
-      counters.redeem = counts[3] || 0;
+
+      for (let i = 0; i < functionNames.length; i++) {
+        counters[functionNames[i]] = counts[i] || 0;
+      }
     }
   } catch {
     // File doesn’t exist or is invalid; use defaults
@@ -48,7 +46,7 @@ async function loadCounters(): Promise<Record<string, number>> {
 // Write counters to CSV as a single row
 async function saveCounters(counters: Record<string, number>) {
   const header = `${functionNames.join(",")}\n`;
-  const csvLine = `${counters.deposit},${counters.withdraw},${counters.stake},${counters.redeem}\n`;
+  const csvLine = `${Object.values(counters).join(",")}\n`;
   const csvContent = header + csvLine;
 
   try {
