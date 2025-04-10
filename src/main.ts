@@ -1,26 +1,78 @@
-// main.ts (or your entry file)
 import { deposit } from "./deposit";
 import { redeem } from "./redeem";
 import { stake } from "./stake";
 import { withdraw } from "./withdraw";
+import * as fs from "fs/promises";
+import * as path from "path";
 
-// Array of function references (not invoking them yet)
+// Array of function references
 const functions = [deposit, withdraw, stake, redeem];
+const functionNames = functions.map((f) => f.name);
 
-// Select a random function
-const randomIndex = Math.floor(Math.random() * functions.length);
-const fn = functions[randomIndex];
+// CSV file path
+const csvFilePath = path.join(__dirname, "../function_calls.csv");
 
-// Log which function was selected
-console.log(`Selected function: ${fn.name}`);
+// Load counters from CSV or initialize
+async function loadCounters(): Promise<Record<string, number>> {
+  const counters: Record<string, number> = {
+    deposit: 0,
+    withdraw: 0,
+    stake: 0,
+    redeem: 0,
+  };
 
-// Call only the selected function
-fn()
-  .then(() => {
+  try {
+    const data = await fs.readFile(csvFilePath, "utf8");
+    const lines = data.trim().split("\n");
+    if (lines.length > 1) {
+      // Check for data row
+      const counts = lines[1].split(",").map(Number); // Second line is the data
+      counters.deposit = counts[0] || 0;
+      counters.withdraw = counts[1] || 0;
+      counters.stake = counts[2] || 0;
+      counters.redeem = counts[3] || 0;
+    }
+  } catch {
+    // File doesn’t exist or is invalid; use defaults
+  }
+  return counters;
+}
+
+// Write counters to CSV as a single row
+async function saveCounters(counters: Record<string, number>) {
+  const header = "deposit,withdraw,stake,redeem\n";
+  const csvLine = `${counters.deposit},${counters.withdraw},${counters.stake},${counters.redeem}\n`;
+  const csvContent = header + csvLine;
+
+  try {
+    await fs.writeFile(csvFilePath, csvContent); // Overwrite entire file
+    console.log(`Updated CSV: ${csvLine.trim()}`);
+  } catch (error) {
+    console.error("Error writing to CSV:", error);
+  }
+}
+
+// Main execution
+async function run() {
+  const counters = await loadCounters();
+  const randomIndex = Math.floor(Math.random() * functions.length);
+  const fn = functions[randomIndex];
+  const selectedFunctionName = functionNames[randomIndex];
+
+  console.log(`Selected function: ${fn.name}`);
+
+  try {
+    await fn(); // Execute the function
+    counters[selectedFunctionName] += 1; // Increment the counter for the selected function
+    await saveCounters(counters);
     console.log("Function executed successfully");
     process.exit(0);
-  })
-  .catch((error: any) => {
+  } catch (error: any) {
+    counters[selectedFunctionName] += 1; // Optional: count even on error
+    await saveCounters(counters);
     console.error("Error executing function:", error);
     process.exit(1);
-  });
+  }
+}
+
+run();
