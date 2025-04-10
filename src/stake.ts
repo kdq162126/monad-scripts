@@ -1,28 +1,11 @@
 import Web3 from "web3";
 import { config } from "dotenv";
+import * as fs from "fs";
+import * as path from "path";
 
 config();
 
 const AMOUNT = `${process.env.STAKE_AMOUNT || 0.01}`;
-
-const abi = [
-  {
-    type: "function",
-    name: "deposit",
-    inputs: [
-      {
-        name: "assets",
-        type: "uint256",
-      },
-      {
-        name: "receiver",
-        type: "address",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-];
 
 // Configuration interface
 interface Config {
@@ -31,13 +14,13 @@ interface Config {
   contractAddress: string;
 }
 
-export async function stake() {
+async function stake(abi: any, contractAddress: string) {
   try {
     // Set up configuration
     const config: Config = {
       rpcUrl: "https://testnet-rpc.monad.xyz",
       privateKey: process.env.PRIVATE_KEY as string,
-      contractAddress: "0x3a98250f98dd388c211206983453837c8365bdc1",
+      contractAddress,
     };
 
     // Initialize Web3
@@ -90,9 +73,24 @@ export async function stake() {
   }
 }
 
-// stake()
-//   .then(() => process.exit(0))
-//   .catch((error) => {
-//     console.error(error);
-//     process.exit(1);
-//   });
+export async function stake_shMON() {
+  const abiPath = path.resolve(__dirname, "./abi/shMON.json");
+  if (!fs.existsSync(abiPath)) {
+    throw new Error(`ABI file not found at ${abiPath}`);
+  }
+
+  const contractABI = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+
+  await stake(contractABI, "0x3a98250f98dd388c211206983453837c8365bdc1");
+}
+
+export async function stake_aprMON() {
+  const abiPath = path.resolve(__dirname, "./abi/aprMON.json");
+  if (!fs.existsSync(abiPath)) {
+    throw new Error(`ABI file not found at ${abiPath}`);
+  }
+
+  const contractABI = JSON.parse(fs.readFileSync(abiPath, "utf8"));
+
+  await stake(contractABI, "0xb2f82d0f38dc453d596ad40a37799446cc89274a");
+}

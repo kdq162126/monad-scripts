@@ -1,12 +1,19 @@
 import { deposit } from "./deposit";
-import { redeem } from "./redeem";
-import { stake } from "./stake";
+import { redeem_aprMON, redeem_shMON } from "./redeem";
+import { stake_aprMON, stake_shMON } from "./stake";
 import { withdraw } from "./withdraw";
 import * as fs from "fs/promises";
 import * as path from "path";
 
 // Array of function references
-const functions = [deposit, withdraw, stake, redeem];
+const functions = [
+  deposit,
+  withdraw,
+  stake_shMON,
+  redeem_shMON,
+  stake_aprMON,
+  redeem_aprMON,
+];
 const functionNames = functions.map((f) => f.name);
 
 // CSV file path
@@ -40,7 +47,7 @@ async function loadCounters(): Promise<Record<string, number>> {
 
 // Write counters to CSV as a single row
 async function saveCounters(counters: Record<string, number>) {
-  const header = "deposit,withdraw,stake,redeem\n";
+  const header = `${functionNames.join(",")}\n`;
   const csvLine = `${counters.deposit},${counters.withdraw},${counters.stake},${counters.redeem}\n`;
   const csvContent = header + csvLine;
 
