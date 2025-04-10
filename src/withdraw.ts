@@ -43,7 +43,10 @@ export async function withdraw() {
     // Create contract instance
     const contract = new web3.eth.Contract(contractABI, config.contractAddress);
 
-    const value = web3.utils.toWei(AMOUNT, "ether");
+    const tokenBalance = await contract.methods
+      .balanceOf(account.address)
+      .call();
+    const value = tokenBalance as unknown as bigint;
 
     // Prepare transaction
     const tx = {

@@ -1,37 +1,44 @@
 import Web3 from "web3";
 import { config } from "dotenv";
-import * as fs from "fs";
-import * as path from "path";
 
 config();
 
-const AMOUNT = `${process.env.SWAP_AMOUNT || 0.01}`;
+const AMOUNT = `${process.env.STAKE_AMOUNT || 0.01}`;
+
+const abi = [
+  {
+    type: "function",
+    name: "deposit",
+    inputs: [
+      {
+        name: "assets",
+        type: "uint256",
+      },
+      {
+        name: "receiver",
+        type: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+];
 
 // Configuration interface
 interface Config {
   rpcUrl: string;
   privateKey: string;
   contractAddress: string;
-  abiPath: string;
 }
 
-export async function deposit() {
+export async function stake() {
   try {
     // Set up configuration
     const config: Config = {
       rpcUrl: "https://testnet-rpc.monad.xyz",
       privateKey: process.env.PRIVATE_KEY as string,
-      contractAddress: "0x760afe86e5de5fa0ee542fc7b7b713e1c5425701",
-      abiPath: "./abi/WrappedMonad.json",
+      contractAddress: "0x3a98250f98dd388c211206983453837c8365bdc1",
     };
-
-    // Load ABI from JSON file
-    const abiPath = path.resolve(__dirname, config.abiPath);
-    if (!fs.existsSync(abiPath)) {
-      throw new Error(`ABI file not found at ${abiPath}`);
-    }
-
-    const contractABI = JSON.parse(fs.readFileSync(abiPath, "utf8"));
 
     // Initialize Web3
     const web3 = new Web3(config.rpcUrl);
@@ -41,24 +48,27 @@ export async function deposit() {
     web3.eth.accounts.wallet.add(account);
 
     // Create contract instance
-    const contract = new web3.eth.Contract(contractABI, config.contractAddress);
-
+    const contract = new web3.eth.Contract(abi, config.contractAddress);
     const value = web3.utils.toWei(AMOUNT, "ether");
+    const receiver = account.address;
+
     // Prepare transaction
     const tx = {
       from: account.address,
       to: config.contractAddress,
-      data: contract.methods.deposit().encodeABI(),
-      value: value,
-      gas: "100000",
+      data: contract.methods.deposit(value, receiver).encodeABI(), // Pass assets and receiver
+      value: value, // Send Ether
+      gas: "100000", // Initial estimate
       gasPrice: await web3.eth.getGasPrice(),
     };
 
-    // Estimate gas (optional but recommended for payable functions)
-    const gasEstimate = await contract.methods.deposit().estimateGas({
-      from: account.address,
-      value: value,
-    });
+    // Estimate gas (recommended for payable functions)
+    const gasEstimate = await contract.methods
+      .deposit(value, receiver)
+      .estimateGas({
+        from: account.address,
+        value: value,
+      });
     tx.gas = gasEstimate.toString();
 
     console.log(
@@ -79,3 +89,10 @@ export async function deposit() {
     throw error;
   }
 }
+
+// stake()
+//   .then(() => process.exit(0))
+//   .catch((error) => {
+//     console.error(error);
+//     process.exit(1);
+//   });
